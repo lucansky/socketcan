@@ -61,7 +61,7 @@ canSend s = send s canTestMsg
 canRead :: Socket -> IO (Either String CanFrame)
 canRead s =
   alloca $ \ptrCf -> do
-    (cnt, _) <- recvBufFrom s (ptrCf :: Ptr CanFrame) 8
+    (cnt, _) <- recvBufFrom s (ptrCf :: Ptr CanFrame) 16
     if cnt > 0 then do
       frame <- peek ptrCf
       return $ Right frame

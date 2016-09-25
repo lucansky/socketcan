@@ -21,6 +21,7 @@ executable socketcan
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10
                      , bytestring >= 0.10
+                     , data-default >= 0.7
                      , network >= 2.6
                      , utf8-string > 1.0.1
   hs-source-dirs:      src

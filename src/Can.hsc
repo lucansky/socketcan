@@ -4,6 +4,7 @@ import Foreign.C.Types
 import Foreign.Storable
 import Foreign.Marshal.Array
 import Foreign.Ptr
+import Data.Bits
 
 #include "can.h"
 
@@ -58,3 +59,12 @@ instance Storable CanFilter where
   poke ptr (CanFilter id mask) = do
     #{poke struct can_filter, can_id} ptr id
     #{poke struct can_filter, can_mask} ptr mask
+
+isErrorMessage :: CanFrame -> Bool
+isErrorMessage cf = testBit (_canFrameCanId cf) #{const CAN_EFF_ID_BITS}
+
+isExtendedFrameFormat :: CanFrame -> Bool
+isExtendedFrameFormat cf = testBit (_canFrameCanId cf) #{const CAN_SFF_ID_BITS}
+
+isStandardFrameFormat :: CanFrame -> Bool
+isStandardFrameFormat cf = not $ isExtendedFrameFormat cf

@@ -1,0 +1,58 @@
+module Can where
+
+import Foreign.C.Types (CUInt, CUChar)
+import Foreign.Storable
+
+#include "<can.h>"
+
+#let alignment t = "%lu", (unsigned long) offsetof(struct { char x__; t (y__); }, y__)
+
+data CanFrame = CanFrame
+  { -- | 32 bit CAN_ID + EFF/RTR/ERR flags
+    _canFrameCanId  :: CUInt
+  -- | frame payload length in byte (0 .. CAN_MAX_DLEN)
+  , _canFrameCanDlc :: CUChar
+  -- | padding
+  , _canFramePad    :: CUChar
+  -- | reserved padding
+  , _canFrameRes0   :: CUChar
+  -- | reserved padding
+  , _canFrameRes1   :: CUChar
+  -- | CAN frame payload (up to 8 byte)
+  , _canFrameData   :: [CUChar]
+  }
+
+instance Storable CanFrame where
+  sizeOf _  = #{alignment struct can_frame}
+  alignment = #{size struct can_frame}
+  peek ptr  = do
+    id    <- #{peek struct can_frame, can_id} ptr
+    dlc   <- #{peek struct can_frame, can_dlc} ptr
+    pad   <- #{peek struct can_frame, __pad} ptr
+    res0  <- #{peek struct can_frame, __res0} ptr
+    res1  <- #{peek struct can_frame, __res1} ptr
+    data' <- peekArray #{const CAN_MAX_DLEN} #{ptr struct can_frame, data} ptr
+    return $ CanFrame id dlc pad res0 res1 data'
+  poke ptr (CanFrame id, dlc, pad, res0, res1, data') = do
+    #{poke struct can_frame, can_id} ptr id
+    #{poke struct can_frame, can_dlc} ptr dlc
+    #{poke struct can_frame, __pad} ptr pad
+    #{poke struct can_frame, __res0} ptr res0
+    #{poke struct can_frame, __res1} ptr res1
+    pokeArray #{ptr struct can_frame, data} ptr data'
+
+data CanFilter = data CanFilter
+  { _canFilterCanId   :: CInt
+  , _canFilterCanMask :: CInt
+  }
+
+instance Storable CanFilter where
+  sizeof _  = #{alignment struct can_filter}
+  alignment = #{size struct can_filter}
+  peek ptr = do
+    id <- #{peek struct can_filter, can_id} ptr
+    mask <- #{peek struct can_filter, can_mask} ptr
+    return $ CanFilter id mask
+  poke ptr (CanFilter id mask) = do
+    #{poke struct can_filter, can_id} ptr id
+    #{poke struct can_filter, can_mask} ptr mask

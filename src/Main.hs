@@ -6,21 +6,30 @@ module Main where
 -- candump vcan0
 -- cangen vcan0
 
-import Network.Socket as N (Family(AF_CAN), Socket, SockAddr(..), ProtocolNumber, SocketType(Raw), bind, socket, close)
+import Network.Socket as N (Family(AF_CAN), Socket, SockAddr(..), ProtocolNumber, SocketType(Raw), bind, socket, close, recvBufFrom)
 import Network.Socket.ByteString (recv, send)
 import qualified Data.ByteString as S
-import Data.ByteString.UTF8 (toString)
 import Network.BSD (ifNameToIndex)
 import Data.Maybe (fromJust)
 import Control.Monad (liftM)
+import Foreign.C.Types (CUInt, CUChar)
+import Foreign.Storable
+import qualified Data.ByteString.Char8 as C
+import Foreign.Marshal.Alloc(alloca)
+import Can
+import Foreign.Ptr
+
+bufSize :: Int
+bufSize = 8
 
 main :: IO ()
 main = do
   s <- initCan "vcan0"
-  _ <- canSend s
-  _ <- (print . toString) <$> recv s 4096
-  _ <- close s
+  canSend s
+  canRead s
+  close s
   return ()
+
 
 -- receive CAN frames from every enabled CAN interface
 can0 :: SockAddr
@@ -40,9 +49,24 @@ initCan addr = do
 
 canTestMsg = S.pack [ 0,0,0,0 -- can ID = 0
                     , 4,0,0,0 -- data length counter = 2 (bytes)
-                    , 0x80,123,321,55 -- SYNC with some random extra bytes
+                    , 0x80,123,244,55 -- SYNC with some random extra bytes
                     , 0, 0, 0, 0 -- padding
                     ]
 
 canSend :: Socket -> IO Int
 canSend s = send s canTestMsg
+
+canRead :: Socket -> IO Int
+canRead s = do
+  --buf <- malloc :: IO (Ptr CanFrame)
+  alloca $ \ptrCf -> do
+    (cnt, sa) <- recvBufFrom s (ptrCf :: Ptr CanFrame) 8
+    if cnt > 0 then do
+      cf <-(peek ptrCf) :: IO CanFrame
+      _ <- (print . show . _canFrameCanId) cf
+      return cnt
+    else do
+      print "Length of buffer is zero"
+      return cnt
+
+

@@ -1,9 +1,11 @@
 module Can where
 
-import Foreign.C.Types (CUInt, CUChar)
+import Foreign.C.Types
 import Foreign.Storable
+import Foreign.Marshal.Array
+import Foreign.Ptr
 
-#include "<can.h>"
+#include "can.h"
 
 #let alignment t = "%lu", (unsigned long) offsetof(struct { char x__; t (y__); }, y__)
 
@@ -24,31 +26,31 @@ data CanFrame = CanFrame
 
 instance Storable CanFrame where
   sizeOf _  = #{alignment struct can_frame}
-  alignment = #{size struct can_frame}
+  alignment _ = #{size struct can_frame}
   peek ptr  = do
     id    <- #{peek struct can_frame, can_id} ptr
-    dlc   <- #{peek struct can_frame, can_dlc} ptr
+    dlc   <- (#{peek struct can_frame, can_dlc} ptr) :: IO CUChar
     pad   <- #{peek struct can_frame, __pad} ptr
     res0  <- #{peek struct can_frame, __res0} ptr
     res1  <- #{peek struct can_frame, __res1} ptr
-    data' <- peekArray dlc #{ptr struct can_frame, data} ptr
+    data' <- peekArray (fromIntegral dlc) (#{ptr struct can_frame, data} ptr)
     return $ CanFrame id dlc pad res0 res1 data'
-  poke ptr (CanFrame id, dlc, pad, res0, res1, data') = do
+  poke ptr (CanFrame id dlc pad res0 res1 data') = do
     #{poke struct can_frame, can_id} ptr id
     #{poke struct can_frame, can_dlc} ptr dlc
     #{poke struct can_frame, __pad} ptr pad
     #{poke struct can_frame, __res0} ptr res0
     #{poke struct can_frame, __res1} ptr res1
-    pokeArray #{ptr struct can_frame, data} ptr data'
+    pokeArray (#{ptr struct can_frame, data} ptr) data'
 
-data CanFilter = data CanFilter
+data CanFilter = CanFilter
   { _canFilterCanId   :: CInt
   , _canFilterCanMask :: CInt
   }
 
 instance Storable CanFilter where
-  sizeof _  = #{alignment struct can_filter}
-  alignment = #{size struct can_filter}
+  sizeOf _  = #{alignment struct can_filter}
+  alignment _ = #{size struct can_filter}
   peek ptr = do
     id <- #{peek struct can_filter, can_id} ptr
     mask <- #{peek struct can_filter, can_mask} ptr

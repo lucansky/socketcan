@@ -31,7 +31,7 @@ instance Storable CanFrame where
     pad   <- #{peek struct can_frame, __pad} ptr
     res0  <- #{peek struct can_frame, __res0} ptr
     res1  <- #{peek struct can_frame, __res1} ptr
-    data' <- peekArray #{const CAN_MAX_DLEN} #{ptr struct can_frame, data} ptr
+    data' <- peekArray dlc #{ptr struct can_frame, data} ptr
     return $ CanFrame id dlc pad res0 res1 data'
   poke ptr (CanFrame id, dlc, pad, res0, res1, data') = do
     #{poke struct can_frame, can_id} ptr id

@@ -11,7 +11,7 @@ import Network.Socket.ByteString (recv, send)
 import qualified Data.ByteString as S
 import Network.BSD (ifNameToIndex)
 import Data.Maybe (fromJust)
-import Control.Monad (liftM)
+import Control.Monad (forever, liftM)
 import Foreign.C.Types (CUInt, CUChar)
 import Foreign.Storable
 import qualified Data.ByteString.Char8 as C
@@ -26,7 +26,7 @@ main :: IO ()
 main = do
   s <- initCan "vcan0"
   canSend s
-  canRead s
+  forever $ canRead s
   close s
   return ()
 
@@ -63,7 +63,7 @@ canRead s = do
     (cnt, sa) <- recvBufFrom s (ptrCf :: Ptr CanFrame) 8
     if cnt > 0 then do
       cf <-(peek ptrCf) :: IO CanFrame
-      _ <- (print . show . _canFrameCanId) cf
+      _ <- (print . show) cf
       return cnt
     else do
       print "Length of buffer is zero"

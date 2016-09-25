@@ -26,7 +26,7 @@ data CanFrame = CanFrame
   , _canFrameRes1   :: CUChar
   -- | CAN frame payload (up to 8 byte)
   , _canFrameData   :: [CUChar]
-  }
+  } deriving Show
 
 instance Storable CanFrame where
   sizeOf _  = 8
@@ -64,7 +64,7 @@ instance Storable CanFrame where
 data CanFilter = CanFilter
   { _canFilterCanId   :: CInt
   , _canFilterCanMask :: CInt
-  }
+  } deriving Show
 
 instance Storable CanFilter where
   sizeOf _  = 4

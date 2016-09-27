@@ -18,6 +18,7 @@ import qualified Data.ByteString.Char8 as C
 import Foreign.Marshal.Alloc(alloca)
 import Can
 import Foreign.Ptr
+import Control.Applicative((<$>))
 
 bufSize :: Int
 bufSize = 8

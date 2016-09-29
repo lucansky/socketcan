@@ -47,7 +47,9 @@ instance Storable CanFrame where
     where errFlag = #{const CAN_ERR_FLAG}
           rtrFlag = #{const CAN_RTR_FLAG}
           effFlag  = #{const CAN_EFF_FLAG}
-          maskId canId  = (canId .&. #{const CAN_SFF_MASK})
+          maskId canId
+             | isEff canId = (canId .&. #{const CAN_EFF_MASK})
+             | otherwise   = (canId .&. #{const CAN_SFF_MASK})
           isEff canId = (canId .&. effFlag) /= 0
           isErr canId = (canId .&. errFlag) /= 0
           isRtr canId = (canId .&. rtrFlag) /= 0

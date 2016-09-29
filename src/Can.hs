@@ -62,24 +62,27 @@ instance Storable CanFrame where
 {-# LINE 49 "src/Can.hsc" #-}
           effFlag  = 2147483648
 {-# LINE 50 "src/Can.hsc" #-}
-          maskId canId  = (canId .&. 2047)
-{-# LINE 51 "src/Can.hsc" #-}
+          maskId canId
+             | isEff canId = (canId .&. 536870911)
+{-# LINE 52 "src/Can.hsc" #-}
+             | otherwise   = (canId .&. 2047)
+{-# LINE 53 "src/Can.hsc" #-}
           isEff canId = (canId .&. effFlag) /= 0
           isErr canId = (canId .&. errFlag) /= 0
           isRtr canId = (canId .&. rtrFlag) /= 0
   poke ptr (CanFrame id _ _ _ dlc pad res0 res1 data') = do
     (\hsc_ptr -> pokeByteOff hsc_ptr 0) ptr id
-{-# LINE 56 "src/Can.hsc" #-}
-    (\hsc_ptr -> pokeByteOff hsc_ptr 4) ptr dlc
-{-# LINE 57 "src/Can.hsc" #-}
-    (\hsc_ptr -> pokeByteOff hsc_ptr 5) ptr pad
 {-# LINE 58 "src/Can.hsc" #-}
-    (\hsc_ptr -> pokeByteOff hsc_ptr 6) ptr res0
+    (\hsc_ptr -> pokeByteOff hsc_ptr 4) ptr dlc
 {-# LINE 59 "src/Can.hsc" #-}
-    (\hsc_ptr -> pokeByteOff hsc_ptr 7) ptr res1
+    (\hsc_ptr -> pokeByteOff hsc_ptr 5) ptr pad
 {-# LINE 60 "src/Can.hsc" #-}
-    pokeArray ((\hsc_ptr -> hsc_ptr `plusPtr` 8) ptr) data'
+    (\hsc_ptr -> pokeByteOff hsc_ptr 6) ptr res0
 {-# LINE 61 "src/Can.hsc" #-}
+    (\hsc_ptr -> pokeByteOff hsc_ptr 7) ptr res1
+{-# LINE 62 "src/Can.hsc" #-}
+    pokeArray ((\hsc_ptr -> hsc_ptr `plusPtr` 8) ptr) data'
+{-# LINE 63 "src/Can.hsc" #-}
 
 data CanFilter = CanFilter
   { _canFilterCanId   :: CInt
@@ -88,28 +91,18 @@ data CanFilter = CanFilter
 
 instance Storable CanFilter where
   sizeOf _  = 4
-{-# LINE 69 "src/Can.hsc" #-}
+{-# LINE 71 "src/Can.hsc" #-}
   alignment _ = (8)
-{-# LINE 70 "src/Can.hsc" #-}
+{-# LINE 72 "src/Can.hsc" #-}
   peek ptr = do
     id <- (\hsc_ptr -> peekByteOff hsc_ptr 0) ptr
-{-# LINE 72 "src/Can.hsc" #-}
+{-# LINE 74 "src/Can.hsc" #-}
     mask <- (\hsc_ptr -> peekByteOff hsc_ptr 4) ptr
-{-# LINE 73 "src/Can.hsc" #-}
+{-# LINE 75 "src/Can.hsc" #-}
     return $ CanFilter id mask
   poke ptr (CanFilter id mask) = do
     (\hsc_ptr -> pokeByteOff hsc_ptr 0) ptr id
-{-# LINE 76 "src/Can.hsc" #-}
+{-# LINE 78 "src/Can.hsc" #-}
     (\hsc_ptr -> pokeByteOff hsc_ptr 4) ptr mask
-{-# LINE 77 "src/Can.hsc" #-}
+{-# LINE 79 "src/Can.hsc" #-}
 
-isErrorMessage :: CanId -> Bool
-isErrorMessage canId = testBit canId 29
-{-# LINE 80 "src/Can.hsc" #-}
-
-isExtendedFrameFormat :: CanId -> Bool
-isExtendedFrameFormat canId = testBit canId 11
-{-# LINE 83 "src/Can.hsc" #-}
-
-isStandardFrameFormat :: CanId -> Bool
-isStandardFrameFormat canId = not $ isExtendedFrameFormat canId

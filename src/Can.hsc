@@ -10,9 +10,17 @@ import Data.Bits
 
 #let alignment t = "%lu", (unsigned long) offsetof(struct { char x__; t (y__); }, y__)
 
+type CanId = CUInt
+
 data CanFrame = CanFrame
-  { -- | 32 bit CAN_ID + EFF/RTR/ERR flags
-    _canFrameCanId  :: CUInt
+  { -- | (29bit) 32 bit CAN_ID excluding EFF/RTR/ERR flags
+    _canFrameCanId  :: CanId
+  -- | Extended Frame Format Flag
+  , _canFrameEFF    :: Bool
+  -- | Error Message Frame Flag
+  , _canFrameERR    :: Bool
+  -- | Remote Transmission Request Flag
+  , _canFrameRTR    :: Bool
   -- | frame payload length in byte (0 .. CAN_MAX_DLEN)
   , _canFrameCanDlc :: CUChar
   -- | padding
@@ -35,8 +43,15 @@ instance Storable CanFrame where
     res0  <- #{peek struct can_frame, __res0} ptr
     res1  <- #{peek struct can_frame, __res1} ptr
     data' <- peekArray (fromIntegral dlc) (#{ptr struct can_frame, data} ptr)
-    return $ CanFrame id dlc pad res0 res1 data'
-  poke ptr (CanFrame id dlc pad res0 res1 data') = do
+    return $ CanFrame (maskId id) (isEff id) (isErr id) (isRtr id) dlc pad res0 res1 data'
+    where errFlag = #{const CAN_ERR_FLAG}
+          rtrFlag = #{const CAN_RTR_FLAG}
+          effFlag  = #{const CAN_EFF_FLAG}
+          maskId canId  = (canId .&. #{const CAN_SFF_MASK})
+          isEff canId = (canId .&. effFlag) /= 0
+          isErr canId = (canId .&. errFlag) /= 0
+          isRtr canId = (canId .&. rtrFlag) /= 0
+  poke ptr (CanFrame id _ _ _ dlc pad res0 res1 data') = do
     #{poke struct can_frame, can_id} ptr id
     #{poke struct can_frame, can_dlc} ptr dlc
     #{poke struct can_frame, __pad} ptr pad
@@ -60,11 +75,3 @@ instance Storable CanFilter where
     #{poke struct can_filter, can_id} ptr id
     #{poke struct can_filter, can_mask} ptr mask
 
-isErrorMessage :: CanFrame -> Bool
-isErrorMessage cf = testBit (_canFrameCanId cf) #{const CAN_EFF_ID_BITS}
-
-isExtendedFrameFormat :: CanFrame -> Bool
-isExtendedFrameFormat cf = testBit (_canFrameCanId cf) #{const CAN_SFF_ID_BITS}
-
-isStandardFrameFormat :: CanFrame -> Bool
-isStandardFrameFormat cf = not $ isExtendedFrameFormat cf

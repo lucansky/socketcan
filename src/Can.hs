@@ -56,33 +56,73 @@ instance Storable CanFrame where
     data' <- peekArray (fromIntegral dlc) ((\hsc_ptr -> hsc_ptr `plusPtr` 8) ptr)
 {-# LINE 46 "src/Can.hsc" #-}
     return $ CanFrame (maskId id) (isEff id) (isErr id) (isRtr id) dlc pad res0 res1 data'
-    where errFlag = 536870912
-{-# LINE 48 "src/Can.hsc" #-}
-          rtrFlag = 1073741824
-{-# LINE 49 "src/Can.hsc" #-}
-          effFlag  = 2147483648
-{-# LINE 50 "src/Can.hsc" #-}
-          maskId canId
-             | isEff canId = (canId .&. 536870911)
-{-# LINE 52 "src/Can.hsc" #-}
-             | otherwise   = (canId .&. 2047)
-{-# LINE 53 "src/Can.hsc" #-}
-          isEff canId = (canId .&. effFlag) /= 0
-          isErr canId = (canId .&. errFlag) /= 0
-          isRtr canId = (canId .&. rtrFlag) /= 0
   poke ptr (CanFrame id _ _ _ dlc pad res0 res1 data') = do
     (\hsc_ptr -> pokeByteOff hsc_ptr 0) ptr id
-{-# LINE 58 "src/Can.hsc" #-}
+{-# LINE 49 "src/Can.hsc" #-}
     (\hsc_ptr -> pokeByteOff hsc_ptr 4) ptr dlc
-{-# LINE 59 "src/Can.hsc" #-}
+{-# LINE 50 "src/Can.hsc" #-}
     (\hsc_ptr -> pokeByteOff hsc_ptr 5) ptr pad
-{-# LINE 60 "src/Can.hsc" #-}
+{-# LINE 51 "src/Can.hsc" #-}
     (\hsc_ptr -> pokeByteOff hsc_ptr 6) ptr res0
-{-# LINE 61 "src/Can.hsc" #-}
+{-# LINE 52 "src/Can.hsc" #-}
     (\hsc_ptr -> pokeByteOff hsc_ptr 7) ptr res1
-{-# LINE 62 "src/Can.hsc" #-}
+{-# LINE 53 "src/Can.hsc" #-}
     pokeArray ((\hsc_ptr -> hsc_ptr `plusPtr` 8) ptr) data'
-{-# LINE 63 "src/Can.hsc" #-}
+{-# LINE 54 "src/Can.hsc" #-}
+
+data CanFdFrame = CanFdFrame
+  { -- | 32 bit CAN_ID + EFF/RTR/ERR flags
+    _canFdFrameCanId :: CanId
+    -- | Extended Frame Format Flag
+  , _canFdFrameEFF    :: Bool
+  -- | Error Message Frame Flag
+  , _canFdFrameERR    :: Bool
+  -- | Remote Transmission Request Flag
+  , _canFdFrameRTR    :: Bool
+  -- | frame payload length in byte
+  , _canFdFrameLen   :: CUChar
+  -- | additional flags for CAN FD
+  , _canFdFrameFlags :: CUChar
+  -- | reserved / padding
+  , _canFdFrameRes0  :: CUChar
+  -- | reserved / padding
+  , _canFdFrameRes1  :: CUChar
+  -- | CAN FD frame payload (up to CANFD_MAX_DLEN byte)
+  , _canFdFrameData  :: [CUChar]
+  }
+
+instance Storable CanFdFrame where
+  sizeOf _  = 8
+{-# LINE 78 "src/Can.hsc" #-}
+  alignment _ = (72)
+{-# LINE 79 "src/Can.hsc" #-}
+  peek ptr  = do
+    id    <- (\hsc_ptr -> peekByteOff hsc_ptr 0) ptr
+{-# LINE 81 "src/Can.hsc" #-}
+    len   <- ((\hsc_ptr -> peekByteOff hsc_ptr 4) ptr) :: IO CUChar
+{-# LINE 82 "src/Can.hsc" #-}
+    flags   <- ((\hsc_ptr -> peekByteOff hsc_ptr 5) ptr) :: IO CUChar
+{-# LINE 83 "src/Can.hsc" #-}
+    res0  <- (\hsc_ptr -> peekByteOff hsc_ptr 6) ptr
+{-# LINE 84 "src/Can.hsc" #-}
+    res1  <- (\hsc_ptr -> peekByteOff hsc_ptr 7) ptr
+{-# LINE 85 "src/Can.hsc" #-}
+    data' <- peekArray (fromIntegral len) ((\hsc_ptr -> hsc_ptr `plusPtr` 8) ptr)
+{-# LINE 86 "src/Can.hsc" #-}
+    return $ CanFdFrame (maskId id) (isEff id) (isErr id) (isRtr id)len flags res0 res1 data'
+  poke ptr (CanFdFrame id _ _ _ len flags res0 res1 data') = do
+    (\hsc_ptr -> pokeByteOff hsc_ptr 0) ptr id
+{-# LINE 89 "src/Can.hsc" #-}
+    (\hsc_ptr -> pokeByteOff hsc_ptr 4) ptr len
+{-# LINE 90 "src/Can.hsc" #-}
+    (\hsc_ptr -> pokeByteOff hsc_ptr 5) ptr flags
+{-# LINE 91 "src/Can.hsc" #-}
+    (\hsc_ptr -> pokeByteOff hsc_ptr 6) ptr res0
+{-# LINE 92 "src/Can.hsc" #-}
+    (\hsc_ptr -> pokeByteOff hsc_ptr 7) ptr res1
+{-# LINE 93 "src/Can.hsc" #-}
+    pokeArray ((\hsc_ptr -> hsc_ptr `plusPtr` 8) ptr) data'
+{-# LINE 94 "src/Can.hsc" #-}
 
 data CanFilter = CanFilter
   { _canFilterCanId   :: CInt
@@ -91,18 +131,37 @@ data CanFilter = CanFilter
 
 instance Storable CanFilter where
   sizeOf _  = 4
-{-# LINE 71 "src/Can.hsc" #-}
+{-# LINE 102 "src/Can.hsc" #-}
   alignment _ = (8)
-{-# LINE 72 "src/Can.hsc" #-}
+{-# LINE 103 "src/Can.hsc" #-}
   peek ptr = do
     id <- (\hsc_ptr -> peekByteOff hsc_ptr 0) ptr
-{-# LINE 74 "src/Can.hsc" #-}
+{-# LINE 105 "src/Can.hsc" #-}
     mask <- (\hsc_ptr -> peekByteOff hsc_ptr 4) ptr
-{-# LINE 75 "src/Can.hsc" #-}
+{-# LINE 106 "src/Can.hsc" #-}
     return $ CanFilter id mask
   poke ptr (CanFilter id mask) = do
     (\hsc_ptr -> pokeByteOff hsc_ptr 0) ptr id
-{-# LINE 78 "src/Can.hsc" #-}
+{-# LINE 109 "src/Can.hsc" #-}
     (\hsc_ptr -> pokeByteOff hsc_ptr 4) ptr mask
-{-# LINE 79 "src/Can.hsc" #-}
+{-# LINE 110 "src/Can.hsc" #-}
+
+maskId :: CUInt -> CanId
+maskId canId
+  | isEff canId = (canId .&. 536870911)
+{-# LINE 114 "src/Can.hsc" #-}
+  | otherwise   = (canId .&. 2047)
+{-# LINE 115 "src/Can.hsc" #-}
+
+isEff :: CanId -> Bool
+isEff canId = (canId .&. 2147483648) /= 0
+{-# LINE 118 "src/Can.hsc" #-}
+
+isErr :: CanId -> Bool
+isErr canId = (canId .&. 536870912) /= 0
+{-# LINE 121 "src/Can.hsc" #-}
+
+isRtr :: CanId -> Bool
+isRtr canId = (canId .&. 1073741824) /= 0
+{-# LINE 124 "src/Can.hsc" #-}
 
